@@ -1,6 +1,9 @@
 
 #include <iostream>
 #include <string>
+// работа с консолью
+#include <Windows.h>
+
 
 using namespace std;
 
@@ -15,7 +18,7 @@ private:
 	
 	int chunks[chunkSize];
 
-	int smooth = 2;
+	int smooth = 1;
 
 public:
     // конструктор принимающий строку
@@ -31,33 +34,31 @@ public:
 			number.erase(0, 1);
 		}
 
-		// заполняем массив чисел
-		for (int i = 0; i < chunkSize; i++)
+		int delta = number.length() / smooth;
+
+		if ((float)number.length() / smooth != delta)
 		{
-			try
-			{
-				chunks[i] = stoi(number.substr((i)*smooth, smooth));
-				cout << stoi(number.substr((i)*smooth, smooth)) << endl;
-			}
-			catch (const std::exception&)
-			{
-				chunks[i] = NULL;
-			}
-			//cout << chunks[chunkSizes - i - 1] << endl;;
+			delta++;
 		}
 		
-
-		/*for (int i = 0; i < 3; i++)
+		delta = chunkSize - delta;
+		
+		// заполняем массив чисел
+		for (int i = delta; i < chunkSize; i++)
 		{
-			cout << chunks[i] << endl;
-		}*/
+			chunks[i - delta] = stoi(number.substr((chunkSize - i - 1) * smooth, smooth));
+		}
+		for (int i = chunkSize - delta; i < chunkSize; i++)
+		{
+			chunks[i] = NULL;
+		}
 
-		cout << "Задано число: ";
-		this->Format();
 	}
 
-	void Format()
+	void Print()
 	{
+		bool check = false;
+
 		if (isNegative)
 		{
 			cout << '-';
@@ -65,35 +66,172 @@ public:
 
 		for (int i = chunkSize - 1; i >= 0; i--)
 		{
-			if (chunks[i] == NULL)
+			if (chunks[i] != NULL)
 			{
-				continue;
+				check = true;
 			}
-
-			cout << chunks[i];
+			if (check)
+			{
+				cout << chunks[i];
+			}
+		}
+		if (!check)
+		{
+			cout << 0;
 		}
 		
 		cout << endl;
 	}
 
+	string ToString()
+	{
+		string str;
+		bool check = false;
+
+		if (isNegative)
+		{
+			cout << '-';
+		}
+
+		for (int i = chunkSize - 1; i >= 0; i--)
+		{
+			if (chunks[i] != NULL)
+			{
+				check = true;
+			}
+			if (check)
+			{
+				str += to_string(chunks[i]);
+			}
+		}
+		if (!check)
+		{
+			str += "0";
+		}
+
+		return str;
+	}
+
 	BigInt operator += (BigInt right)
 	{
-		
+		if (isNegative)
+		{
+			return *this;
+		}
+
+		for (int i = 0; i < chunkSize; i++)
+		{
+			chunks[i] += right.chunks[i];
+			if (chunks[i] >= pow(10, smooth))
+			{
+				chunks[i] -= pow(10, smooth);
+				chunks[i + 1] += 1;
+				chunks[i] = max(0, chunks[i]);
+			}
+		}
+
 		return *this;
 	}
 
+	friend BigInt operator + (BigInt left, BigInt right)
+	{
+		if (left.isNegative && right.isNegative)
+		{
+			return BigInt("0");
+		}
+
+		BigInt result("0");
+
+		result += left;
+		result += right;
+
+		return result;
+	}
+
 };
+
+
+void Tests()
+{
+	string sum_data[][3] =
+	{ 
+		{"123456789", "0", "123456789"},
+		{"123456789", "111", "123456900"},
+		{"111", "123456789", "123456900"}
+	};
+	
+
+	cout << endl << "===   +=   ===" << endl << endl;
+
+	for (int i = 0; i < 3; i ++)
+	{
+		cout << "Задано число n1: " << sum_data[i][0] << endl;
+		BigInt n1(sum_data[i][0]);
+		
+		cout << "Задано число n2: " << sum_data[i][1] << endl;
+		BigInt n2(sum_data[i][1]);
+
+		cout << "n1 += n2 => ";
+		n1 += n2;
+		cout << n1.ToString() << endl;
+
+		if (sum_data[i][2] == n1.ToString())
+		{
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN);
+			cout << "Правильно" << endl;
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+		}
+		else
+		{
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED);
+			cout << "Ошибка" << "\a" << endl;
+			cout << "i = " << i << endl;
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+		}
+		
+
+		cout << endl;
+	}
+	cout << endl << "===   +   ===" << endl << endl;
+
+
+	for (int i = 0; i < 3; i++)
+	{
+		cout << "Задано число n1: " << sum_data[i][0] << endl;
+		BigInt n1(sum_data[i][0]);
+
+		cout << "Задано число n2: " << sum_data[i][1] << endl;
+		BigInt n2(sum_data[i][1]);
+
+		cout << "n1 + n2 => ";
+		BigInt n0 = n1 + n2;
+		cout << n0.ToString() << endl;
+
+		if (sum_data[i][2] == n0.ToString())
+		{
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN);
+			cout << "Правильно" << endl;
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+		}
+		else
+		{
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED);
+			cout << "Ошибка" << "\a" << endl;
+			cout << "i = " << i << endl;
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+		}
+
+
+		cout << endl;
+	}
+
+}
 
 void main()
 {
 	setlocale(LC_ALL, "RUS");
 
-	BigInt n("123456789");
-	BigInt n1("111");
-
-	n.Format();
-
-	n += n1;
-	n.Format();
-
+	
+	Tests();
+	cout << endl;
 }
